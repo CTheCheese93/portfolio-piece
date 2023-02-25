@@ -68,7 +68,7 @@ We'll use argparse to handle the command line argument and create a class that h
 * Using specific selectors was the biggest key, the time it took to come to that solution was a common gotcha with scraping. I'm taking this as a lesson to get specific fast instead of trying to avoid messy selectors
 * We've now successfully scraped all the information, next step is to get the data into a CSV file
 * CSV file creation is functioning as well as CSV importing to confirm there is no data loss during conversion
-* Next steps are to start building out the SQLite functionality, we're doing this to get the initial FailedBanks table built with the information we currently have. Afterward we will 
+* Next steps are to start building out the SQLite functionality, we're doing this to get the initial FailedBanks table built with the information we currently have. Afterward we will Scrape Bank Failures.
 ## Game Development
 ### Snake
 ### 2048
