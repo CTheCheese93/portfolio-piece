@@ -4,6 +4,8 @@ from selenium.webdriver.common.by import By
 
 import csv
 
+import sqlite3
+
 ### Implementation
 
 ## 1.0-Imp Scraping FDIC Failed Bank List and Exporting to CSV
@@ -129,9 +131,62 @@ def import_failed_banks_from_csv(csv_file_path):
 
 ## 2.0-Imp Import FDIC Failed bank List from CSV File
 
+class DBConnector:
+    def __init__(self, database_name):
+        self.con = sqlite3.connect(database_name)
+        self.cursor = self.con.cursor()
+    
+    def execute(self, sql_code, data=()):
+        return self.cursor.execute(sql_code, data)
+    
+    def executemany(self, sql_code, data):
+        return self.cursor.executemany(sql_code, data)
+    
+    def commit(self):
+        self.con.commit()
+
+    def execute_and_commit(self, sql_code):
+        res = self.execute(self, sql_code)
+        self.commit(self)
+        return res
+    
+    def close(self):
+        self.con.close()
+
+def failed_bank_table_build_up(db):
+    query = 'CREATE TABLE failed_banks(bank_name, bank_fdic_link, city, state, fdic_cert, aquiring_institution, closing_date, funds);'
+
+    if(db.execute('SELECT name from sqlite_master where name="failed_banks";').fetchone() is None):
+        db.execute(query)
+    else:
+        failed_bank_table_teardown(db)
+        db.execute(query)
+
+def failed_bank_table_teardown(db):
+    db.execute('DROP TABLE failed_banks;')
+
+def insert_failed_bank(db, failed_bank):
+    data = (failed_bank.bank_name, failed_bank.bank_fdic_link,
+                failed_bank.city, failed_bank.state,
+                failed_bank.fdic_cert, failed_bank.aquiring_institution,
+                failed_bank.closing_date, failed_bank.funds)
+    db.execute("INSERT INTO failed_banks VALUES(?,?,?,?,?,?,?,?);", data)
+    db.commit()
+
+def insert_failed_banks(db, list_of_failed_banks):
+    list_of_data = []
+
+    for failed_bank in list_of_failed_banks:
+        list_of_data.append((failed_bank.bank_name, failed_bank.bank_fdic_link,
+                failed_bank.city, failed_bank.state, failed_bank.fdic_cert,
+                failed_bank.aquiring_institution, failed_bank.closing_date, failed_bank.funds))
+    
+    db.executemany("INSERT INTO failed_banks VALUES(?,?,?,?,?,?,?,?);", list_of_data)
+    db.commit()
+
 ### For Interactive
 
-## 1.0-Int Scraping FDIC Failed Bank List and Exporting to CSV
+## 1.0-Inter Scraping FDIC Failed Bank List and Exporting to CSV
 
 # g_table_rows = get_table_rows_of_failed_banks()
 # first_failed_bank = convert_table_row_to_FailedBank(g_table_rows[0])
@@ -140,6 +195,15 @@ def import_failed_banks_from_csv(csv_file_path):
 
 # export_failed_banks_to_CSV(failed_banks)
 
-## 2.0-Int Import FDIC Failed bank List from CSV File
+## 2.0-Inter Import FDIC Failed bank List from CSV File
 
-# failed_banks = import_failed_banks_from_csv('failed_banks.csv')
+# db = DBConnector("testing.db")
+
+# # Build up will automatically teardown if needed
+# failed_bank_table_build_up(db)
+
+# failed_bank_list = import_failed_banks_from_csv("failed_banks.csv")
+# insert_failed_banks(db, failed_bank_list)
+# print(db.execute("SELECT COUNT(*) from failed_banks;").fetchone())
+
+## 3.0-Inter  
