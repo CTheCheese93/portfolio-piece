@@ -2,11 +2,22 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 
+from selenium.webdriver.firefox.options import Options
+
 import csv
 
 import sqlite3
 
 ### Implementation
+
+## 0.0-Imp
+
+def get_selenium_driver():
+    options = Options()
+    options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
+    driver = webdriver.Firefox(options=options)
+    driver.implicitly_wait(3)
+    return driver
 
 ## 1.0-Imp Scraping FDIC Failed Bank List and Exporting to CSV
 
@@ -36,7 +47,7 @@ class FailedBank:
 
 def get_table_rows_of_failed_banks():
     url = "https://www.fdic.gov/resources/resolutions/bank-failures/failed-bank-list/index.html"
-    driver =  webdriver.Firefox()
+    driver =  get_selenium_driver()
     driver.get(url)
 
     # Get Select element that controls how many entries we see
@@ -184,6 +195,102 @@ def insert_failed_banks(db, list_of_failed_banks):
     db.executemany("INSERT INTO failed_banks VALUES(?,?,?,?,?,?,?,?);", list_of_data)
     db.commit()
 
+## 3.0-Imp Scrape Bank Failures in Brief
+
+class BriefPage:
+    def __init__(self, bank_name, bank_link, city, state, pr_id, pr_link, closing_date, assets, deposit, acquirer_notes):
+        self.bank_name = bank_name
+        self.bank_link = bank_link
+        self.city = city
+        self.state = state
+        self.pr_id = pr_id
+        self.pr_link = pr_link
+        self.closing_date = closing_date
+        self.assets = assets
+        self.deposit = deposit
+        self.acquirer_notes = acquirer_notes
+    
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        return
+    
+    def __repr__(self):
+        return f"{self.bank_name};{self.bank_link};{self.city};{self.state};" \
+                f"{self.pr_id};{self.pr_link};{self.closing_date};{self.assets};" \
+                f"{self.deposit};{self.acquirer_notes}"
+
+def convert_table_row_to_BriefPage(table_row):
+    tds = table_row.find_elements(By.TAG_NAME, 'td')
+    
+    if(len(tds) <= 1):
+        return []
+
+    bank_name_city_state_text = str.split(tds[0].text, ',')
+    
+    print(f'Processing {tds[0].text}')
+
+    bank_name = tds[0].text
+    bank_link = tds[0].find_elements(By.TAG_NAME, 'a')[0].get_attribute('href')
+    city = None
+    state = None
+    pr_id = tds[1].text
+    pr_link = tds[1].find_elements(By.TAG_NAME, 'a')[0].get_attribute('href')
+    closing_date = tds[2].text
+    assets = tds[3].text
+    deposit = tds[4].text
+    acquirer_notes = tds[5].text
+
+    return [BriefPage(bank_name, bank_link, city, state, pr_id, pr_link, closing_date, assets, deposit, acquirer_notes)]
+    
+
+def scrape_brief_page_by_year(driver, year):
+    bank_briefs = []
+    page_url = f'https://www.fdic.gov/bank/historical/bank/bfb{year}.html'
+
+    print(f'Scraping Brief Page for year {year}')
+
+    driver.get(page_url)
+
+    table_rows = driver.find_elements(By.CSS_SELECTOR, f'[id="{year}-description"] table.details tbody tr')
+
+    # If there was no table body, just return an empty BriefPage
+    if (len(table_rows) == 0):
+        return []
+    
+    for table_row in table_rows:
+        bank_briefs.extend(convert_table_row_to_BriefPage(table_row))
+    
+    return bank_briefs
+
+def export_bank_briefs_to_CSV(bank_briefs):
+    with open('brief_pages.csv', 'w', newline='', encoding='utf-8') as csvfile:
+        fieldnames = ['bank_name', 'bank_link', 'city', 'state',
+                      'pr_id', 'pr_link', 'closing_date', 'assets', 'deposit', 'acquirer_notes']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter='|')
+
+        writer.writeheader()
+
+        i = 0
+        total = len(bank_briefs)
+        for brief_page in bank_briefs:
+            i += 1
+            with brief_page as bp:
+                print(f'Exporting {bp.bank_name} ({i}/{total})')
+                writer.writerow({
+                    'bank_name': bp.bank_name,
+                    'bank_link': bp.bank_link,
+                    'city': bp.city,
+                    'state': bp.state,
+                    'pr_id': bp.pr_id,
+                    'pr_link': bp.pr_link,
+                    'closing_date': bp.closing_date,
+                    'assets': bp.assets,
+                    'deposit': bp.deposit,
+                    'acquirer_notes': bp.acquirer_notes
+                })
+
 ### For Interactive
 
 ## 1.0-Inter Scraping FDIC Failed Bank List and Exporting to CSV
@@ -204,6 +311,15 @@ def insert_failed_banks(db, list_of_failed_banks):
 
 # failed_bank_list = import_failed_banks_from_csv("failed_banks.csv")
 # insert_failed_banks(db, failed_bank_list)
-# print(db.execute("SELECT COUNT(*) from failed_banks;").fetchone())
+# print(db.execute("SELECT COUNT(*) from failed_banks;").fetchone()) # Should give 563 results
 
-## 3.0-Inter  
+## 3.0-Inter Scrape Bank Failures in Brief
+
+driver = get_selenium_driver()
+
+bank_briefs = []
+
+for year in range(2001, 2023):
+    bank_briefs.extend(scrape_brief_page_by_year(driver, year))
+
+export_bank_briefs_to_CSV(bank_briefs)
