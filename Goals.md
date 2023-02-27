@@ -57,10 +57,9 @@ We'll use argparse to handle the command line argument and create a class that h
 * We might also find an excuse to use an ini file by this point
 
 ### Notes To Insert
-* [What is Cert?](https://www.google.com/search?q=FDIC+Cert)
 * [Is scraping a government website legal?](https://www.silicon.co.uk/e-management/social-laws/us-court-data-scraping-legal-452720)
 
-### Process
+### Process Notes
 * Looked at tutorials and attempted to use mechanicalsoup, but the Select element isn't wrapped in a form, which seems to break mechanicalsoup
 * Now refreshing my knowledge on Selenium, which was my first choice anyways but thought I'd attempt a simpler solution first
     * I didn't spend too long trying to find a workaround with mechanicalsoup, so that could be a fault on me, but I know Selenium will work
@@ -70,7 +69,11 @@ We'll use argparse to handle the command line argument and create a class that h
 * CSV file creation is functioning as well as CSV importing to confirm there is no data loss during conversion
 * Next steps are to start building out the SQLite functionality, we're doing this to get the initial `failed_banks` table built with the information we currently have. Afterward we will Scrape Bank Failures.
 * `failed_banks` table built and data is being imported at a very basic level, we'll need to go back to refine the table creation to include explicit typing of columns and likely have to modify some of the data like closing dates to fit the DATETIME format. For now, we move forward.
-
+    * The data is also still a little dirty. We stripped all line breaks in the bank name, but we need to filter out the occasional "En Espanol" that gets captured.
+* I was able to get the Bank Failures in Brief data for each year, but the data is very dirty.
+    * Banks can have multiple Press Releases, which actually makes things a little more complicated. Likely we will pull Press Releases into a list on the BriefPage object and put Press Releases into their own table with a relationship to the `brief_pages` table
+    * Unlike the Bank Failure List data, the `bank_name` field has no line breaks or additional "En Espanol" text, however it currently holds onto the bank name, city, and state while the city and state columns are empty
+    * These are the two things we need to focus on next
 ## Game Development
 ### Snake
 ### 2048
