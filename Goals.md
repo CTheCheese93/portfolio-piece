@@ -78,6 +78,11 @@ We'll use argparse to handle the command line argument and create a class that h
 * I noticed that we ended up exporting only 561 banks instead of the 563 exported from the Failed Banks List, it will be interesting when we start merging information to see if we have any gaps.
 * The Press Releases ended up being pretty easy and fun to implement because it seemed pretty seamless, but that makes sense since the problem was already isolated to a list of anchor elements rather than an entire table (the bigger problem)
 * The brief data and press release data are ready to be imported into a table, but before we do that I want to fix the "En Espanol" problem because I'm just procrastinating on it for no reason
+* I did a lot in one go and forgot to commit while I did it.
+    * En Espanol is gone
+    * I refactored the code for scraping and importing so they share the same database connection and webdriver instances.
+    * Bank Briefs CSV->DB importing works
+* Next thing is going to be Press Releases CSV->DB
 ## Game Development
 ### Snake
 ### 2048
