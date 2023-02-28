@@ -45,9 +45,9 @@ class FailedBank:
         return f"{self.bank_name};{self.bank_fdic_link};{self.city};{self.state};" \
                 f"{self.fdic_cert};{self.aquiring_institution};{self.closing_date};{self.funds}"
 
-def get_table_rows_of_failed_banks():
+def get_table_rows_of_failed_banks(driver):
     url = "https://www.fdic.gov/resources/resolutions/bank-failures/failed-bank-list/index.html"
-    driver =  get_selenium_driver()
+
     driver.get(url)
 
     # Get Select element that controls how many entries we see
@@ -64,7 +64,7 @@ def convert_table_row_to_FailedBank(table_row):
     tds = table_row.find_elements(By.TAG_NAME, 'td')
 
     # Bank Name & Link
-    bank_name = tds[0].text.replace("En Español", "")
+    bank_name = tds[0].text.replace("En Español", "").strip()
     bank_fdic_link = tds[0].find_elements(By.TAG_NAME, 'a')[0].get_attribute('href')
 
     # City & State
@@ -93,7 +93,7 @@ def convert_table_rows_to_FailedBanks(table_rows):
     return failed_banks
 
 def export_failed_banks_to_CSV(failed_banks):
-    with open('failed_banks.csv', 'w', newline='', encoding='utf-8') as csvfile:
+    with open('src/failed_banks.csv', 'w', newline='', encoding='utf-8') as csvfile:
         fieldnames = ['bank_name', 'bank_fdic_link', 'city', 'state',
                       'fdic_cert', 'aquiring_institution', 'closing_date', 'funds']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter='|')
@@ -334,14 +334,14 @@ def export_BriefPages_to_CSV(bank_briefs):
 
 ### For Interactive
 
+driver = get_selenium_driver()
+
 ## 1.0-Inter Scraping FDIC Failed Bank List and Exporting to CSV
 
-# g_table_rows = get_table_rows_of_failed_banks()
-# first_failed_bank = convert_table_row_to_FailedBank(g_table_rows[0])
+failed_banks_table_rows = get_table_rows_of_failed_banks(driver)
+failed_banks = convert_table_rows_to_FailedBanks(failed_banks_table_rows)
 
-# failed_banks = convert_table_rows_to_FailedBanks(g_table_rows)
-
-# export_failed_banks_to_CSV(failed_banks)
+export_failed_banks_to_CSV(failed_banks)
 
 ## 2.0-Inter Import FDIC Failed bank List from CSV File
 
@@ -357,8 +357,6 @@ def export_BriefPages_to_CSV(bank_briefs):
 ## 3.0-Inter Scrape Bank Failures in Brief
 
 # Scraping and Exporting to CSV
-# driver = get_selenium_driver()
-
 # bank_briefs = []
 
 # for year in range(2001, 2023):
