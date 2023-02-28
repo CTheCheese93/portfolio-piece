@@ -10,8 +10,6 @@ import sqlite3
 
 ### Implementation
 
-## 0.0-Imp
-
 def get_selenium_driver():
     options = Options()
     options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
@@ -19,7 +17,7 @@ def get_selenium_driver():
     driver.implicitly_wait(3)
     return driver
 
-## 1.0-Imp Scraping FDIC Failed Bank List and Exporting to CSV
+## Scraping FDIC Failed Bank List and Exporting to CSV
 
 class FailedBank:
     def __init__(self, bank_name, bank_fdic_link,
@@ -140,15 +138,18 @@ def import_failed_banks_from_csv(csv_file_path):
     
     return failed_banks
 
-## 2.0-Imp Import FDIC Failed bank List from CSV File
+## Import FDIC Failed bank List from CSV File
 
 class DBConnector:
     def __init__(self, database_name):
         self.con = sqlite3.connect(database_name)
         self.cursor = self.con.cursor()
     
-    def execute(self, sql_code, data=()):
-        return self.cursor.execute(sql_code, data)
+    def execute(self, sql_code, data=None):
+        if (data):
+            return self.cursor.execute(sql_code, data)
+        else:
+            return self.cursor.execute(sql_code)
     
     def executemany(self, sql_code, data):
         return self.cursor.executemany(sql_code, data)
@@ -167,11 +168,10 @@ class DBConnector:
 def failed_bank_table_build_up(db):
     query = 'CREATE TABLE failed_banks(bank_name, bank_fdic_link, city, state, fdic_cert, aquiring_institution, closing_date, funds);'
 
-    if(db.execute('SELECT name from sqlite_master where name="failed_banks";').fetchone() is None):
-        db.execute(query)
-    else:
+    if(table_exists('failed_banks')):
         failed_bank_table_teardown(db)
-        db.execute(query)
+    
+    db.execute(query)
 
 def failed_bank_table_teardown(db):
     db.execute('DROP TABLE failed_banks;')
@@ -195,7 +195,7 @@ def insert_failed_banks(db, list_of_failed_banks):
     db.executemany("INSERT INTO failed_banks VALUES(?,?,?,?,?,?,?,?);", list_of_data)
     db.commit()
 
-## 3.0-Imp Scrape Bank Failures in Brief
+## Scrape Bank Failures in Brief
 
 class BriefPage:
     def __init__(self, bank_name, bank_link, city, state, press_releases, closing_date, assets, deposit, acquirer_notes):
@@ -330,31 +330,89 @@ def export_BriefPages_to_CSV(bank_briefs):
             print(f'Exporting {brief_page.bank_name} ({i}/{total})')
             write_bank_brief_row(bank_writer, brief_page)
             write_press_release_rows(pr_writer, brief_page)
-                
+
+def table_exists(db, table_name):
+    if (db.execute('SELECT name from sqlite_master where name=(?)', (table_name,)).fetchone() is None):
+        return False
+    else:
+        return True
+
+def bank_brief_table_teardown(db):
+    db.execute('DROP TABLE bank_briefs;')
+
+## Import Bank Briefs from CSV to DB
+def bank_brief_table_build_up(db):
+    query = 'CREATE TABLE bank_briefs(bank_name, bank_link, city, state, closing_date, assets, deposit, acquirer_notes);'
+
+    if(table_exists(db, 'bank_briefs')):
+        bank_brief_table_teardown(db)
+    
+    db.execute(query)
+
+def insert_bank_briefs(db, bank_briefs):
+    list_of_briefs = []
+
+    for bank_brief in bank_briefs:
+        list_of_briefs.append((
+            bank_brief.bank_name,
+            bank_brief.bank_link,
+            bank_brief.city,
+            bank_brief.state,
+            bank_brief.closing_date,
+            bank_brief.assets,
+            bank_brief.deposit,
+            bank_brief.acquirer_notes
+        ))
+    db.executemany('INSERT INTO bank_briefs VALUES(?,?,?,?,?,?,?,?);', list_of_briefs)
+    db.commit()
+
+def import_bank_briefs_from_csv(briefcsv):
+    bank_briefs = []
+
+    with open(briefcsv, newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile, delimiter='|')
+
+        i = 0
+
+        for row in reader:
+            i+1
+            print(f'Converting {row["bank_name"]} to BankBrief object. ({i})')
+            bank_briefs.append(BriefPage(
+                row['bank_name'],
+                row['bank_link'],
+                row['city'],
+                row['state'],
+                [], # Skipping Press Releases
+                row['closing_date'],
+                row['assets'],
+                row['deposit'],
+                row['acquirer_notes']
+            ))
+        
+    return bank_briefs
 
 ### For Interactive
 
-driver = get_selenium_driver()
+# driver = get_selenium_driver()
+db = DBConnector("src/testing.db")
 
-## 1.0-Inter Scraping FDIC Failed Bank List and Exporting to CSV
+## Scraping FDIC Failed Bank List and Exporting to CSV
 
-failed_banks_table_rows = get_table_rows_of_failed_banks(driver)
-failed_banks = convert_table_rows_to_FailedBanks(failed_banks_table_rows)
+# failed_banks_table_rows = get_table_rows_of_failed_banks(driver)
+# failed_banks = convert_table_rows_to_FailedBanks(failed_banks_table_rows)
 
-export_failed_banks_to_CSV(failed_banks)
+# export_failed_banks_to_CSV(failed_banks)
 
-## 2.0-Inter Import FDIC Failed bank List from CSV File
+## Import FDIC Failed bank List from CSV File to DB
 
-# db = DBConnector("testing.db")
-
-# # Build up will automatically teardown if needed
+## Build up will automatically teardown if needed
 # failed_bank_table_build_up(db)
 
-# failed_bank_list = import_failed_banks_from_csv("failed_banks.csv")
+# failed_bank_list = import_failed_banks_from_csv("src/failed_banks.csv")
 # insert_failed_banks(db, failed_bank_list)
 # print(db.execute("SELECT COUNT(*) from failed_banks;").fetchone()) # Should give 563 results
 
-## 3.0-Inter Scrape Bank Failures in Brief
+# Scrape Bank Failures in Brief
 
 # Scraping and Exporting to CSV
 # bank_briefs = []
@@ -364,3 +422,13 @@ export_failed_banks_to_CSV(failed_banks)
 
 # export_BriefPages_to_CSV(bank_briefs)
 
+# driver.close()
+
+## Import BankBriefs data from CSV to DB
+
+bank_brief_table_build_up(db)
+
+bank_brief_list = import_bank_briefs_from_csv("src/brief_pages.csv")
+insert_bank_briefs(db, bank_brief_list)
+
+print(db.execute("SELECT COUNT(*) from bank_briefs;").fetchone()) # Should give 561
