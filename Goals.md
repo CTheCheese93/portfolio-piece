@@ -74,6 +74,10 @@ We'll use argparse to handle the command line argument and create a class that h
     * Banks can have multiple Press Releases, which actually makes things a little more complicated. Likely we will pull Press Releases into a list on the BriefPage object and put Press Releases into their own table with a relationship to the `brief_pages` table
     * Unlike the Bank Failure List data, the `bank_name` field has no line breaks or additional "En Espanol" text, however it currently holds onto the bank name, city, and state while the city and state columns are empty
     * These are the two things we need to focus on next
+* Did I say the Brief data has no line breaks? It actually had exactly one, it also had a missing comma that resulted in me having to hard code a fix to have a clean run.
+* I noticed that we ended up exporting only 561 banks instead of the 563 exported from the Failed Banks List, it will be interesting when we start merging information to see if we have any gaps.
+* The Press Releases ended up being pretty easy and fun to implement because it seemed pretty seamless, but that makes sense since the problem was already isolated to a list of anchor elements rather than an entire table (the bigger problem)
+* The brief data and press release data are ready to be imported into a table, but before we do that I want to fix the "En Espanol" problem because I'm just procrastinating on it for no reason
 ## Game Development
 ### Snake
 ### 2048
