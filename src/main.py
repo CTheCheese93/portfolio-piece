@@ -391,6 +391,47 @@ def import_bank_briefs_from_csv(briefcsv):
         
     return bank_briefs
 
+def press_release_table_teardown(db):
+    db.execute('DROP TABLE press_releases')
+
+def press_release_table_build_up(db):
+    query = 'CREATE TABLE press_releases(bank_link, pr_id, pr_link);'
+
+    if(table_exists(db, 'press_releases')):
+        press_release_table_teardown(db)
+
+    db.execute(query)
+
+def import_press_releases_from_csv(prcsv):
+    press_releases = []
+
+    with open(prcsv, newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile, delimiter='|')
+        
+        i = 0
+
+        for row in reader:
+            i += 1
+            print(f'Converting Press Release #{row["pr_id"]} ({i})')
+            press_releases.append({
+                'bank_link': row['bank_link'],
+                'pr_id': row['pr_id'],
+                'pr_link':row['pr_link']
+            })
+    
+    return press_releases
+
+def insert_press_releases(db, press_release_list):
+    list_of_prs = []
+
+    for press_release in press_release_list:
+        list_of_prs.append((press_release['bank_link'],
+                            press_release['pr_id'],
+                            press_release['pr_link']))
+    
+    db.executemany('INSERT INTO press_releases VALUES(?,?,?)', list_of_prs)
+    db.commit()
+
 ### For Interactive
 
 # driver = get_selenium_driver()
@@ -426,9 +467,18 @@ db = DBConnector("src/testing.db")
 
 ## Import BankBriefs data from CSV to DB
 
-bank_brief_table_build_up(db)
+# bank_brief_table_build_up(db)
 
-bank_brief_list = import_bank_briefs_from_csv("src/brief_pages.csv")
-insert_bank_briefs(db, bank_brief_list)
+# bank_brief_list = import_bank_briefs_from_csv("src/brief_pages.csv")
+# insert_bank_briefs(db, bank_brief_list)
 
-print(db.execute("SELECT COUNT(*) from bank_briefs;").fetchone()) # Should give 561
+# print(db.execute("SELECT COUNT(*) from bank_briefs;").fetchone()) # Should give 561
+
+## Import Press Releases to DB
+
+# press_release_table_build_up(db)
+
+# press_release_list = import_press_releases_from_csv("src/press_releases.csv")
+# insert_press_releases(db, press_release_list)
+
+# print(db.execute("SELECT COUNT(*) from press_releases;").fetchone()) # Should give 568
