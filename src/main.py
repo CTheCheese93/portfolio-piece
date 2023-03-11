@@ -4,16 +4,18 @@ from selenium.webdriver.common.by import By
 
 from selenium.webdriver.firefox.options import Options
 
-import csv
+from dotenv import load_dotenv
 
+import csv
 import sqlite3
+import os
 
 ### Implementation
 
 def get_selenium_driver():
     options = Options()
     options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
-    driver = webdriver.Firefox(options=options)
+    driver = webdriver.Firefox(executable_path=os.environ['gecko_location'], options=options)
     driver.implicitly_wait(3)
     return driver
 
